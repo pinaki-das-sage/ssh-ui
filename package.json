@@ -2,7 +2,7 @@
   "name": "ssh-ui",
   "displayName": "SSH UI",
   "description": "VSCode Extension: Manage and connect to SSH hosts from UI",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "pinaki-das-sage",
   "author": {
     "name": "Pinaki Das",
