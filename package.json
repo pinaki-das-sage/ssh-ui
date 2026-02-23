@@ -1,0 +1,103 @@
+{
+  "name": "ssh-ui",
+  "displayName": "SSH UI",
+  "description": "VSCode Extension: Manage and connect to SSH hosts from UI",
+  "version": "0.1.0",
+  "publisher": "pinaki-das-sage",
+  "author": {
+    "name": "Pinaki Das",
+    "email": "pinaki17@gmail.com",
+    "url": "https://github.com/pinaki-das-sage/ssh-ui"
+  },
+  "icon": "icon.png",
+  "repository": "https://github.com/pinaki-das-sage/ssh-ui.git",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:sshHostsView",
+    "onCommand:ssh-ui.editConfig",
+    "onCommand:ssh-ui.savePassword",
+    "onCommand:ssh-ui.deletePassword"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "sshHostsViewContainer",
+          "title": "SSH UI",
+          "icon": "resources/viewContainerIcon.svg"
+        }
+      ]
+    },
+    "views": {
+      "sshHostsViewContainer": [
+        {
+          "id": "sshHostsView",
+          "name": "SSH UI"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "ssh-ui.editConfig",
+        "title": "Edit configuration file",
+        "category": "SSH UI",
+        "icon": "resources/editConfig.svg"
+      },
+      {
+        "command": "ssh-ui.savePassword",
+        "title": "Save password for group or host",
+        "category": "SSH UI",
+        "icon": "resources/savePassword.svg"
+      },
+      {
+        "command": "ssh-ui.deletePassword",
+        "title": "Delete saved password for group or host",
+        "category": "SSH UI",
+        "icon": "resources/deletePassword.svg"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "ssh-ui.editConfig",
+          "when": "view == sshHostsView",
+          "group": "navigation@1",
+          "icon": "resources/editConfig.svg"
+        },
+        {
+          "command": "ssh-ui.savePassword",
+          "when": "view == sshHostsView",
+          "group": "navigation@2",
+          "icon": "resources/savePassword.svg"
+        },
+        {
+          "command": "ssh-ui.deletePassword",
+          "when": "view == sshHostsView",
+          "group": "navigation@3",
+          "icon": "resources/deletePassword.svg"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "echo 'Prepublish script - No direct execution required'",
+    "lint": "eslint .",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/node": "20.x",
+    "@types/vscode": "^1.96.0",
+    "eslint": "^9.16.0",
+    "vscode": "^1.1.37"
+  },
+  "dependencies": {
+    "keytar": "^7.9.0",
+    "ssh-config": "^4.3.0"
+  }
+}
