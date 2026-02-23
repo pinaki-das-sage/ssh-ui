@@ -10,6 +10,7 @@
     "url": "https://github.com/pinaki-das-sage/ssh-ui"
   },
   "icon": "icon.png",
+  "license": "MIT",
   "repository": "https://github.com/pinaki-das-sage/ssh-ui.git",
   "engines": {
     "vscode": "^1.96.0"

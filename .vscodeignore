@@ -1,0 +1,11 @@
+.github/**
+.vscode/**
+.vscode-test/**
+.gitignore
+node_modules/**
+**/*.test.js
+**/*.spec.js
+*.vsix
+.eslintrc*
+eslint.config.*
+icon.svg
