@@ -59,7 +59,7 @@ The extension stores host configurations in `~/.vscode-ssh-ui-config.json`:
 ## Requirements
 
 - **VS Code** 1.96.0 or later
-- **expect** (pre-installed on macOS and most Linux distributions) — required for auto-login with saved passwords
+- **OpenSSH** 8.4 or later (for auto-login with saved passwords) — ships with Windows 10/11, macOS, and most Linux distributions
 
 ## Security
 

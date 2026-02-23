@@ -77,39 +77,32 @@ const ConfigManager = {
             const identityArg = host.identityFile ? ` -i ${host.identityFile}` : '';
 
             if (password && !host.identityFile) {
-                // Write a temporary expect script to avoid quoting issues in the terminal
+                // Use SSH_ASKPASS to auto-enter password (cross-platform, works on Windows/macOS/Linux)
+                // SSH_ASKPASS_REQUIRE=force tells OpenSSH 8.4+ to use askpass even with a TTY
                 const tmpDir = os.tmpdir();
-                const scriptPath = path.join(tmpDir, '.ssh-ui-connect.exp');
-                const expectScript = [
-                    '#!/usr/bin/expect -f',
-                    `set timeout 30`,
-                    `set password $env(_SSH_UI_PASS)`,
-                    `log_user 1`,
-                    `spawn ssh -t ${sshTarget} -p ${host.port}`,
-                    `expect {`,
-                    `    "Are you sure you want to continue connecting" {`,
-                    `        send "yes\\r"`,
-                    `        exp_continue`,
-                    `    }`,
-                    `    -nocase "password:" {`,
-                    `        log_user 0`,
-                    `        send "$password\\r"`,
-                    `        log_user 1`,
-                    `    }`,
-                    `    timeout {`,
-                    `        puts "Connection timed out"`,
-                    `        exit 1`,
-                    `    }`,
-                    `}`,
-                    `interact`,
-                ].join('\n');
-                fs.writeFileSync(scriptPath, expectScript, { mode: 0o700 });
+                const isWindows = process.platform === 'win32';
+                let askpassPath;
+
+                if (isWindows) {
+                    // Write a .cmd script that echoes the password from env
+                    askpassPath = path.join(tmpDir, '.ssh-ui-askpass.cmd');
+                    fs.writeFileSync(askpassPath, '@echo off\r\necho %_SSH_UI_PASS%\r\n', { mode: 0o700 });
+                } else {
+                    // Write a .sh script that echoes the password from env
+                    askpassPath = path.join(tmpDir, '.ssh-ui-askpass.sh');
+                    fs.writeFileSync(askpassPath, '#!/bin/sh\necho "$_SSH_UI_PASS"\n', { mode: 0o700 });
+                }
 
                 const terminal = vscode.window.createTerminal({
                     name: `SSH: ${host.name}`,
-                    env: { _SSH_UI_PASS: password }
+                    env: {
+                        _SSH_UI_PASS: password,
+                        SSH_ASKPASS: askpassPath,
+                        SSH_ASKPASS_REQUIRE: 'force',
+                        DISPLAY: ':0'  // needed on some systems for SSH_ASKPASS
+                    }
                 });
-                terminal.sendText(`expect ${scriptPath}`);
+                terminal.sendText(`ssh -t ${sshTarget} -p ${host.port}`);
                 terminal.show();
             } else {
                 // Key-based auth or no password — plain ssh
