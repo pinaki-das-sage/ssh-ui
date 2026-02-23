@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a73e8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d47a1;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="termGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4fc3f7;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#0d47a1;stop-opacity:0" />
+    </linearGradient>
+  </defs>
+  <!-- Rounded background -->
+  <rect width="256" height="256" rx="48" ry="48" fill="url(#bg)"/>
+  <!-- Terminal window body -->
+  <rect x="36" y="52" width="184" height="152" rx="12" ry="12" fill="#0f1923" stroke="#4fc3f7" stroke-width="3"/>
+  <!-- Terminal title bar -->
+  <rect x="36" y="52" width="184" height="28" rx="12" ry="12" fill="#1a2a3a"/>
+  <rect x="36" y="68" width="184" height="12" fill="#1a2a3a"/>
+  <!-- Title bar dots -->
+  <circle cx="56" cy="66" r="5" fill="#ff5f57"/>
+  <circle cx="74" cy="66" r="5" fill="#febc2e"/>
+  <circle cx="92" cy="66" r="5" fill="#28c840"/>
+  <!-- Terminal glow -->
+  <rect x="39" y="80" width="178" height="121" rx="0" ry="0" fill="url(#termGlow)"/>
+  <!-- SSH prompt: $ ssh -->
+  <text x="52" y="112" font-family="monospace, Courier New, Courier" font-size="22" font-weight="bold" fill="#4fc3f7">$</text>
+  <text x="70" y="112" font-family="monospace, Courier New, Courier" font-size="22" font-weight="bold" fill="#81d4fa">ssh</text>
+  <!-- Connection arrow / key icon -->
+  <!-- Lock/Key symbol representing secure connection -->
+  <g transform="translate(128, 155)">
+    <!-- Key body -->
+    <circle cx="0" cy="0" r="18" fill="none" stroke="#ffd54f" stroke-width="4"/>
+    <circle cx="0" cy="0" r="7" fill="#ffd54f"/>
+    <!-- Key shaft -->
+    <line x1="18" y1="0" x2="50" y2="0" stroke="#ffd54f" stroke-width="4" stroke-linecap="round"/>
+    <!-- Key teeth -->
+    <line x1="40" y1="0" x2="40" y2="10" stroke="#ffd54f" stroke-width="4" stroke-linecap="round"/>
+    <line x1="48" y1="0" x2="48" y2="8" stroke="#ffd54f" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <!-- Blinking cursor -->
+  <rect x="108" y="98" width="12" height="20" fill="#4fc3f7" opacity="0.8"/>
+</svg>
