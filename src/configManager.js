@@ -39,7 +39,7 @@ const ConfigManager = {
         const config = this._readConfig();
         return (config.hosts || []).map(host => {
             const item = new vscode.TreeItem(
-                `${host.name} (${host.user}@${host.host}:${host.port})`,
+                `${host.name}`,
                 vscode.TreeItemCollapsibleState.None
             );
             item.contextValue = 'host';
