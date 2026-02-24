@@ -70,15 +70,16 @@ const ConfigManager = {
             if (!item) return;
             const host = this._findHost(item.label);
             if (!host) return;
-            // Retrieve stored password
+            // Retrieve stored password (used for password auth OR key passphrase)
             let password = _credentialManager ? await _credentialManager.getPassword(host) : null;
 
             const sshTarget = `${host.user}@${host.host}`;
             const identityArg = host.identityFile ? ` -i ${host.identityFile}` : '';
 
-            if (password && !host.identityFile) {
-                // Use SSH_ASKPASS to auto-enter password (cross-platform, works on Windows/macOS/Linux)
+            if (password) {
+                // Use SSH_ASKPASS to auto-enter password/passphrase (cross-platform, works on Windows/macOS/Linux)
                 // SSH_ASKPASS_REQUIRE=force tells OpenSSH 8.4+ to use askpass even with a TTY
+                // This works for both password auth and key passphrase authentication
                 const tmpDir = os.tmpdir();
                 const isWindows = process.platform === 'win32';
                 let askpassPath;
@@ -102,10 +103,10 @@ const ConfigManager = {
                         DISPLAY: ':0'  // needed on some systems for SSH_ASKPASS
                     }
                 });
-                terminal.sendText(`ssh -t ${sshTarget} -p ${host.port}`);
+                terminal.sendText(`ssh -t ${sshTarget} -p ${host.port}${identityArg}`);
                 terminal.show();
             } else {
-                // Key-based auth or no password — plain ssh
+                // No password stored — plain ssh (may prompt interactively)
                 const terminal = vscode.window.createTerminal({
                     name: `SSH: ${host.name}`
                 });
