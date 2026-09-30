@@ -1,3 +1,5 @@
 .github/
 node_modules/
 ssh-ui-*.vsix
+agent-output/
+.vscode/

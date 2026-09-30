@@ -1,8 +1,8 @@
 .github/**
+agent-output/**
 .vscode/**
 .vscode-test/**
 .gitignore
-node_modules/**
 **/*.test.js
 **/*.spec.js
 *.vsix

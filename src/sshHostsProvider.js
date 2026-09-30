@@ -26,7 +26,7 @@ class SSHHostsProvider {
     }
 
     async connectToHost(item) {
-        if (item && item.contextValue === 'host') {
+        if (item && (item.contextValue === 'host' || item.contextValue === 'phpunitHost')) {
             await ConfigManager.connectToHost(item);
         }
     }

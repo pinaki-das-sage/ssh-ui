@@ -1,8 +1,8 @@
 {
   "name": "ssh-ui",
-  "displayName": "SSH UI",
-  "description": "VSCode Extension: Manage and connect to SSH hosts from UI",
-  "version": "0.1.2",
+  "displayName": "Remote Toolkit",
+  "description": "VS Code toolkit for SSH and remote PHPUnit workflows",
+  "version": "0.5.11",
   "publisher": "pinaki-das-sage",
   "author": {
     "name": "Pinaki Das",
@@ -25,7 +25,7 @@
       "activitybar": [
         {
           "id": "sshHostsViewContainer",
-          "title": "SSH UI",
+          "title": "Remote Toolkit",
           "icon": "resources/viewContainerIcon.svg"
         }
       ]
@@ -34,7 +34,7 @@
       "sshHostsViewContainer": [
         {
           "id": "sshHostsView",
-          "name": "SSH UI",
+          "name": "Remote Toolkit",
           "icon": "resources/viewContainerIcon.svg"
         }
       ]
@@ -43,38 +43,102 @@
       {
         "command": "ssh-ui.editConfig",
         "title": "Edit configuration file",
-        "category": "SSH UI",
+        "category": "Remote Toolkit",
         "icon": "resources/editConfig.svg"
       },
       {
         "command": "ssh-ui.addHost",
         "title": "Add Host",
-        "category": "SSH UI",
+        "category": "Remote Toolkit",
         "icon": "resources/addHost.svg"
       },
       {
         "command": "ssh-ui.removeHost",
         "title": "Remove Host",
-        "category": "SSH UI",
+        "category": "Remote Toolkit",
         "icon": "resources/removeHost.svg"
       },
       {
         "command": "ssh-ui.savePassword",
         "title": "Save password for host",
-        "category": "SSH UI",
+        "category": "Remote Toolkit",
         "icon": "resources/savePassword.svg"
       },
       {
         "command": "ssh-ui.deletePassword",
         "title": "Delete saved password for host",
-        "category": "SSH UI",
+        "category": "Remote Toolkit",
         "icon": "resources/deletePassword.svg"
       },
       {
         "command": "ssh-ui.connect",
         "title": "Connect",
-        "category": "SSH UI",
+        "category": "Remote Toolkit",
         "icon": "$(plug)"
+      },
+      {
+        "command": "ssh-ui.editPhpunitConfig",
+        "title": "Edit PHPUnit Config",
+        "category": "Remote Toolkit",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "ssh-ui.setPhpunitDefaultHost",
+        "title": "Select SFTP Target for PHPUnit",
+        "category": "Remote Toolkit",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "ssh-ui.runPhpunit",
+        "title": "Run All PHPUnit Tests",
+        "category": "Remote Toolkit",
+        "icon": "$(play)"
+      },
+      {
+        "command": "ssh-ui.runPhpunitFile",
+        "title": "Run PHPUnit: This File",
+        "category": "Remote Toolkit"
+      },
+      {
+        "command": "ssh-ui.runPhpunitFolder",
+        "title": "Run PHPUnit Tests in Folder",
+        "category": "Remote Toolkit",
+        "icon": "$(folder-library)"
+      },
+      {
+        "command": "ssh-ui.runPhpunitMethod",
+        "title": "Run PHPUnit: This Test",
+        "category": "Remote Toolkit"
+      },
+      {
+        "command": "ssh-ui.sftpUploadActiveFile",
+        "title": "Upload Active File via SFTP",
+        "category": "Remote Toolkit",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "ssh-ui.sftpDownloadFile",
+        "title": "Download File via SFTP",
+        "category": "Remote Toolkit",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "ssh-ui.sftpListDirectory",
+        "title": "List SFTP Directory",
+        "category": "Remote Toolkit",
+        "icon": "$(folder)"
+      },
+      {
+        "command": "ssh-ui.selectSftpTarget",
+        "title": "Select SFTP Target",
+        "category": "Remote Toolkit",
+        "icon": "$(cloud)"
+      },
+      {
+        "command": "ssh-ui.sftpSyncFolder",
+        "title": "Sync Folder via SFTP",
+        "category": "Remote Toolkit",
+        "icon": "$(sync)"
       }
     ],
     "menus": {
@@ -93,31 +157,75 @@
       "view/item/context": [
         {
           "command": "ssh-ui.connect",
-          "when": "view == sshHostsView && viewItem == host",
+          "when": "view == sshHostsView && (viewItem == host || viewItem == phpunitHost)",
           "group": "inline@0"
         },
         {
           "command": "ssh-ui.savePassword",
-          "when": "view == sshHostsView && viewItem == host",
+          "when": "view == sshHostsView && (viewItem == host || viewItem == phpunitHost)",
           "group": "inline@1"
         },
         {
           "command": "ssh-ui.removeHost",
-          "when": "view == sshHostsView && viewItem == host",
+          "when": "view == sshHostsView && (viewItem == host || viewItem == phpunitHost)",
           "group": "inline@2"
+        },
+        {
+          "command": "ssh-ui.runPhpunit",
+          "when": "view == sshHostsView && viewItem == phpunitHost",
+          "group": "inline@3"
+        },
+        {
+          "command": "ssh-ui.editPhpunitConfig",
+          "when": "view == sshHostsView && (viewItem == host || viewItem == phpunitHost)",
+          "group": "context@1"
+        },
+        {
+          "command": "ssh-ui.runPhpunit",
+          "when": "view == sshHostsView && viewItem == phpunitHost",
+          "group": "context@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "ssh-ui.runPhpunitFile",
+          "when": "resourceScheme == file && !explorerResourceIsFolder",
+          "group": "navigation@19"
+        },
+        {
+          "command": "ssh-ui.runPhpunitFolder",
+          "when": "explorerResourceIsFolder && resourceScheme == file",
+          "group": "navigation@20"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "ssh-ui.runPhpunitFolder",
+          "when": "false"
+        },
+        {
+          "command": "ssh-ui.runPhpunitMethod",
+          "when": "false"
         }
       ]
     }
   },
   "scripts": {
-    "vscode:prepublish": "echo 'Prepublish script - No direct execution required'",
+    "postinstall": "node scripts/fix-native-permissions.js",
+    "vscode:prepublish": "node scripts/fix-native-permissions.js",
     "lint": "eslint .",
-    "test": "vscode-test"
+    "test": "npm run test:unit",
+    "test:unit": "node --test test/unit/**/*.test.js"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.3",
     "@types/node": "20.x",
     "@types/vscode": "^1.96.0",
     "eslint": "^9.16.0",
     "vscode": "^1.1.37"
+  },
+  "dependencies": {
+    "node-pty": "^1.1.0",
+    "ssh2-sftp-client": "^12.1.1"
   }
 }

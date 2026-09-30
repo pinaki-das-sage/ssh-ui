@@ -5,11 +5,33 @@ const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const sshPty = require('./sshPty');
+const { createAskpassEnvironment, buildInteractiveSshCommand } = require('./sshAuth');
 
 const CONFIG_FILE = path.join(os.homedir(), '.vscode-ssh-ui-config.json');
 const DEFAULT_CONFIG = JSON.stringify({ hosts: [] }, null, 2);
 
 let _credentialManager = null;
+
+function registerAskpassCleanup(terminal, askpass) {
+    if (!askpass) return;
+    const listener = vscode.window.onDidCloseTerminal(closedTerminal => {
+        if (closedTerminal !== terminal) return;
+        askpass.cleanup();
+        listener.dispose();
+    });
+}
+
+function openStandardSshTerminal(host, password) {
+    const askpass = password ? createAskpassEnvironment(password) : null;
+    const terminal = vscode.window.createTerminal({
+        name: `SSH: ${host.name}`,
+        ...(askpass ? { env: askpass.env } : {}),
+    });
+    registerAskpassCleanup(terminal, askpass);
+    terminal.sendText(buildInteractiveSshCommand(host));
+    terminal.show();
+}
 
 const ConfigManager = {
     /**
@@ -42,7 +64,7 @@ const ConfigManager = {
                 `${host.name}`,
                 vscode.TreeItemCollapsibleState.None
             );
-            item.contextValue = 'host';
+            item.contextValue = host.phpunit && host.phpunit.enabled ? 'phpunitHost' : 'host';
             item.iconPath = new vscode.ThemeIcon('terminal');
             item.command = {
                 command: 'ssh-ui.connect',
@@ -73,51 +95,64 @@ const ConfigManager = {
             // Retrieve stored password (used for password auth OR key passphrase)
             let password = _credentialManager ? await _credentialManager.getPassword(host) : null;
 
-            const sshTarget = `${host.user}@${host.host}`;
-            const identityArg = host.identityFile ? ` -i ${host.identityFile}` : '';
-
-            if (password) {
-                // Use SSH_ASKPASS to auto-enter password/passphrase (cross-platform, works on Windows/macOS/Linux)
-                // SSH_ASKPASS_REQUIRE=force tells OpenSSH 8.4+ to use askpass even with a TTY
-                // This works for both password auth and key passphrase authentication
-                const tmpDir = os.tmpdir();
-                const isWindows = process.platform === 'win32';
-                let askpassPath;
-
-                if (isWindows) {
-                    // Write a .cmd script that echoes the password from env
-                    askpassPath = path.join(tmpDir, '.ssh-ui-askpass.cmd');
-                    fs.writeFileSync(askpassPath, '@echo off\r\necho %_SSH_UI_PASS%\r\n', { mode: 0o700 });
-                } else {
-                    // Write a .sh script that echoes the password from env
-                    askpassPath = path.join(tmpDir, '.ssh-ui-askpass.sh');
-                    fs.writeFileSync(askpassPath, '#!/bin/sh\necho "$_SSH_UI_PASS"\n', { mode: 0o700 });
-                }
-
-                const terminal = vscode.window.createTerminal({
-                    name: `SSH: ${host.name}`,
-                    env: {
-                        _SSH_UI_PASS: password,
-                        SSH_ASKPASS: askpassPath,
-                        SSH_ASKPASS_REQUIRE: 'force',
-                        DISPLAY: ':0'  // needed on some systems for SSH_ASKPASS
-                    }
-                });
-                terminal.sendText(`ssh -t ${sshTarget} -p ${host.port}${identityArg}`);
-                terminal.show();
-            } else {
-                // No password stored — plain ssh (may prompt interactively)
-                const terminal = vscode.window.createTerminal({
-                    name: `SSH: ${host.name}`
-                });
-                terminal.sendText(`ssh -t ${sshTarget} -p ${host.port}${identityArg}`);
-                terminal.show();
+            if (sshPty.isReconnectEnabled(host.reconnect)) {
+                this._connectWithReconnect(host, password);
+                return;
             }
+            openStandardSshTerminal(host, password);
         } catch (err) {
             vscode.window.showErrorMessage('Failed to connect: ' + err.message);
         }
     },
-//CurrentYardWouldUp
+
+    /**
+     * Opt-in connect path: uses node-pty so the terminal can detect
+     * disconnects and offer to reconnect on keypress (PuTTY-style).
+     * Falls back to the standard terminal if node-pty is unavailable.
+     */
+    _connectWithReconnect: function (host, password) {
+        if (!sshPty.isAvailable()) {
+            const err = sshPty.lastLoadError();
+            vscode.window.showWarningMessage(
+                `Auto-reconnect is unavailable on this platform (${err ? err.message : 'node-pty failed to load'}). ` +
+                `Connecting with the standard terminal instead.`
+            );
+            openStandardSshTerminal(host, password);
+            return;
+        }
+
+        if (process.platform === 'win32' && !sshPty.hasWindowsOpenSsh()) {
+            vscode.window.showWarningMessage(
+                'Auto-reconnect requires the Windows OpenSSH client. Connecting with the standard terminal instead.'
+            );
+            openStandardSshTerminal(host, password);
+            return;
+        }
+
+        // Keepalive probes so a dropped network is detected within ~10s instead of
+        // hanging on a dead socket — required for the reconnect prompt to trigger.
+        const sshArgs = [
+            '-tt',
+            '-o', 'ServerAliveInterval=5',
+            '-o', 'ServerAliveCountMax=2',
+            '-o', 'ConnectTimeout=10',
+            '-p', String(host.port),
+        ];
+        if (host.identityFile) sshArgs.push('-i', host.identityFile);
+        sshArgs.push(`${host.user}@${host.host}`);
+
+        const askpass = password ? createAskpassEnvironment(password) : null;
+        let pty;
+        try {
+            pty = sshPty.createReconnectingSshPty(host, sshArgs, askpass ? askpass.env : {});
+        } catch (err) {
+            if (askpass) askpass.cleanup();
+            throw err;
+        }
+        const terminal = vscode.window.createTerminal({ name: `SSH: ${host.name} (auto-reconnect)`, pty });
+        registerAskpassCleanup(terminal, askpass);
+        terminal.show();
+    },
     // ── CRUD helpers ──────────────────────────────────────────────────
 
     _readConfig: function () {
@@ -196,6 +231,36 @@ const ConfigManager = {
                 hostEntry.identityFile = identityFile.trim();
             }
 
+            // Optional: Configure PHPUnit remote runner
+            const enablePhpunit = await vscode.window.showInformationMessage(
+                `Host "${name.trim()}" added. Configure PHPUnit remote runner for this host?`,
+                'Configure PHPUnit', 'Skip'
+            );
+            if (enablePhpunit === 'Configure PHPUnit') {
+                const remotePath = await vscode.window.showInputBox({
+                    title: 'PHPUnit Config (1/2)',
+                    prompt: 'Remote project root path',
+                    placeHolder: 'e.g. /var/www/myapp',
+                    validateInput: v => (!v || !v.trim()) ? 'Remote path is required' : null
+                });
+                if (remotePath && remotePath.trim()) {
+                    const bin = await vscode.window.showInputBox({
+                        title: 'PHPUnit Config (2/2)',
+                        prompt: 'PHPUnit binary path (relative to project root)',
+                        value: './vendor/bin/phpunit',
+                        placeHolder: 'e.g. ./vendor/bin/phpunit',
+                        validateInput: v => (!v || !v.trim()) ? 'Binary path is required' : null
+                    });
+                    if (bin && bin.trim()) {
+                        hostEntry.phpunit = {
+                            enabled: true,
+                            remotePath: remotePath.trim(),
+                            bin: bin.trim()
+                        };
+                    }
+                }
+            }
+
             // Save to config
             const config = this._readConfig();
             config.hosts = config.hosts || [];
@@ -204,7 +269,7 @@ const ConfigManager = {
 
             // Prompt for password (optional)
             const savePass = await vscode.window.showInformationMessage(
-                `Host "${name.trim()}" added. Save a password for this host?`,
+                `Save a password for "${name.trim()}"?`,
                 'Save Password', 'Skip'
             );
             if (savePass === 'Save Password' && _credentialManager) {
@@ -225,11 +290,124 @@ const ConfigManager = {
     },
 
     /**
+     * Edit PHPUnit runner config for an existing host.
+     */
+    editPhpunitConfig: async function (hostItem) {
+        try {
+            if (!hostItem || (hostItem.contextValue !== 'host' && hostItem.contextValue !== 'phpunitHost')) return;
+            const label = typeof hostItem.label === 'string' ? hostItem.label : String(hostItem.label);
+            const hostName = label.replace(/\s*\(.*\)$/, '');
+            const config = this._readConfig();
+            const hostEntry = (config.hosts || []).find(h => h.name === hostName);
+            if (!hostEntry) return;
+
+            const current = hostEntry.phpunit || {};
+            const enabled = await vscode.window.showQuickPick(['Yes', 'No'], {
+                title: `PHPUnit for "${hostName}" — enabled?`,
+                placeHolder: current.enabled ? 'Yes' : 'No'
+            });
+            if (!enabled) return;
+
+            const remotePath = await vscode.window.showInputBox({
+                title: 'PHPUnit Config (1/2)',
+                prompt: 'Remote project root path',
+                value: current.remotePath || '',
+                placeHolder: 'e.g. /var/www/myapp',
+                validateInput: v => (!v || !v.trim()) ? 'Remote path is required' : null
+            });
+            if (!remotePath) return;
+
+            const bin = await vscode.window.showInputBox({
+                title: 'PHPUnit Config (2/2)',
+                prompt: 'PHPUnit binary path (relative to project root)',
+                value: current.bin || './vendor/bin/phpunit',
+                validateInput: v => (!v || !v.trim()) ? 'Binary path is required' : null
+            });
+            if (!bin) return;
+
+            hostEntry.phpunit = {
+                enabled: enabled === 'Yes',
+                remotePath: remotePath.trim(),
+                bin: bin.trim()
+            };
+            this._writeConfig(config);
+            vscode.window.showInformationMessage(`PHPUnit config saved for "${hostName}".`);
+        } catch (err) {
+            vscode.window.showErrorMessage('Failed to save PHPUnit config: ' + err.message);
+        }
+    },
+
+    /**
+     * Return all hosts that have phpunit.enabled === true.
+     * @returns {object[]}
+     */
+    getPhpunitEnabledHosts: function () {
+        const config = this._readConfig();
+        return (config.hosts || []).filter(h => h.phpunit && h.phpunit.enabled === true);
+    },
+
+    /**
+     * Return all hosts with a usable SFTP config (a "sftp" object with remotePath set).
+     * @returns {object[]}
+     */
+    getSftpEnabledHosts: function () {
+        const config = this._readConfig();
+        return (config.hosts || []).filter(h => h.sftp && h.sftp.remotePath);
+    },
+
+    /**
+     * Get the persisted SFTP sync target host name, or null if not set.
+     * @returns {string|null}
+     */
+    getSftpTarget: function () {
+        const config = this._readConfig();
+        return config.sftpTarget || null;
+    },
+
+    /**
+     * Persist the SFTP sync target host name. Pass null to clear it.
+     * @param {string|null} hostName
+     */
+    setSftpTarget: function (hostName) {
+        const config = this._readConfig();
+        if (hostName) {
+            config.sftpTarget = hostName;
+        } else {
+            delete config.sftpTarget;
+        }
+        this._writeConfig(config);
+    },
+
+    /**
+     * Get the persisted default PHPUnit host name, or null if not set.
+     * @returns {string|null}
+     */
+    getPhpunitDefault: function () {
+        const config = this._readConfig();
+        return config.phpunitDefault || null;
+    },
+
+    /**
+     * Persist the default PHPUnit host name.
+     * Pass null to clear the default.
+     * @param {string|null} hostName
+     */
+    setPhpunitDefault: function (hostName) {
+        const config = this._readConfig();
+        if (hostName) {
+            config.phpunitDefault = hostName;
+        } else {
+            delete config.phpunitDefault;
+        }
+        this._writeConfig(config);
+    },
+
+    /**
      * Remove a host and delete its stored password.
      */
     removeHost: async function (hostItem) {
         try {
-            if (!hostItem || hostItem.contextValue !== 'host') return;
+            if (!hostItem || (hostItem.contextValue !== 'host' && hostItem.contextValue !== 'phpunitHost')) return;
             const label = hostItem.label;
             const hostName = typeof label === 'string' ? label.replace(/\s*\(.*\)$/, '') : String(label);
 
@@ -239,11 +417,13 @@ const ConfigManager = {
             if (confirm !== 'Delete') return;
 
             const config = this._readConfig();
+            const removedHost = (config.hosts || []).find(h => h.name === hostName);
             config.hosts = (config.hosts || []).filter(h => h.name !== hostName);
             this._writeConfig(config);
 
             if (_credentialManager) {
                 await _credentialManager.deletePasswordByName(hostName);
+                if (removedHost) await _credentialManager.deleteSftpHostFingerprint(removedHost);
             }
             vscode.window.showInformationMessage(`Host "${hostName}" removed.`);
         } catch (err) {
