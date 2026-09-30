@@ -18,14 +18,14 @@
 ## Getting Started
 
 1. **Install** the extension from the VS Code Marketplace.
-2. **Open the SSH Hosts view** in the Activity Bar (look for the SSH icon).
+2. **Open the Remote Toolkit view** in the Activity Bar (look for the terminal-and-server icon).
 3. **Click the + button** in the title bar to add your first host.
 
 ## Usage
 
 | Action | How |
 |---|---|
-| **Add a host** | Click **+** in the SSH Hosts title bar → follow the 5-step wizard |
+| **Add a host** | Click **+** in the Remote Toolkit title bar → follow the 5-step wizard |
 | **Connect** | Click a host row, or click the **plug** icon |
 | **Save password** | Click the **key** icon on a host row |
 | **Remove a host** | Click the **trash** icon on a host row |
@@ -42,6 +42,27 @@ Run PHPUnit tests on remote servers directly from VS Code, using the same stored
 
 For Intacct-style remote PHPUnit, use the same server-side wrapper configured as PhpStorm's remote PHP interpreter, or an equivalent helper, as `phpunit.bin`. Configure its absolute server path (for example, `/u02/home/your-user/bin/phpunit` rather than `~/bin/phpunit`); the wrapper establishes the required server environment, so no environment variables belong in Remote Toolkit configuration.
 
+### Create the remote PHPUnit wrapper
+
+On the remote development server, create `~/bin/phpunit` once. This wraps the shared PHP interpreter, PHPUnit phar, and bootstrap in the same way as the PhpStorm remote-interpreter setup:
+
+```bash
+mkdir -p ~/bin
+cat > ~/bin/phpunit <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+exec /u02/home/master/externals/unitTest/php84_wrapper \
+  /u02/home/master/externals/unitTest/phpunit-9.5.13.phar \
+  --bootstrap /u02/home/master/externals/unitTest/bootstrap.php \
+  "$@"
+EOF
+chmod 700 ~/bin/phpunit
+~/bin/phpunit --version
+```
+
+If your server provisions different shared paths or PHP versions, use the matching wrapper, PHPUnit phar, and bootstrap paths from its PhpStorm setup. Then configure the wrapper's **absolute** path in Remote Toolkit, for example: `"bin": "/u02/home/your-user/bin/phpunit"`.
+
 The `phpunit` key is added to your host entry:
 
 ```json
@@ -53,7 +74,7 @@ The `phpunit` key is added to your host entry:
   "phpunit": {
     "enabled": true,
     "remotePath": "/var/www/myapp",
-    "bin": "./vendor/bin/phpunit"
+    "bin": "/u02/home/your-user/bin/phpunit"
   }
 }
 ```
@@ -263,6 +284,18 @@ When you select a target through the Command Palette or the `RT-<hostname>` stat
 
 - **VS Code** 1.96.0 or later
 - **OpenSSH** 8.4 or later (for auto-login with saved passwords) — ships with Windows 10/11, macOS, and most Linux distributions
+
+## Packaging and extension size
+
+The published VSIX intentionally includes its runtime `node_modules`: SFTP needs `ssh2-sftp-client`, and reconnecting terminals need `node-pty` plus its native macOS and Windows artifacts. The packaging rules exclude `node-pty` build inputs, source, TypeScript declarations, source maps, tests, documentation, and Windows `.pdb` debug symbols; they retain the JavaScript loader, `.node` binaries, `spawn-helper`, Windows DLLs, and `winpty-agent.exe`.
+
+Package a release with:
+
+```bash
+npx --no-install vsce package --out /private/tmp/remote-toolkit-<version>.vsix
+```
+
+`vsce` may still suggest bundling because the native runtime has many JavaScript files. That is a generic advisory, not a failure: do not remove runtime `node_modules` or native helpers to silence it. Before publishing, inspect `vsce`'s file list and verify reconnecting SSH on macOS and Windows plus SFTP on a real configured host.
 
 ## Security
 

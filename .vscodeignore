@@ -9,3 +9,15 @@ agent-output/**
 .eslintrc*
 eslint.config.*
 icon.svg
+node_modules/**/*.map
+node_modules/**/*.md
+node_modules/**/.github/**
+node_modules/**/test/**
+node_modules/**/tests/**
+node_modules/node-pty/binding.gyp
+node_modules/node-pty/deps/**
+node_modules/node-pty/scripts/**
+node_modules/node-pty/src/**
+node_modules/node-pty/third_party/**
+node_modules/node-pty/typings/**
+node_modules/node-pty/**/*.pdb

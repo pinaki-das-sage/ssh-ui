@@ -8,6 +8,15 @@ Purpose: Records user-visible changes to Remote Toolkit releases.
 
 All notable changes to Remote Toolkit are documented here.
 
+## [0.5.12] — 2026-09-30
+
+### Changed
+- Updated the Marketplace icon from the supplied Remote Toolkit artwork and replaced the Activity Bar icon with its compact terminal/server-transfer counterpart.
+- Reduced the packaged VSIX from approximately 16.4 MB / 803 files to 3.65 MB / 349 files by excluding non-runtime `node-pty` build inputs and Windows debug symbols, while retaining all reconnect runtime binaries.
+
+### Documentation
+- Added the remote `~/bin/phpunit` wrapper creation and verification instructions for Intacct-style PHPUnit runs.
+
 ## [0.5.11] — 2026-09-30
 
 ### Changed

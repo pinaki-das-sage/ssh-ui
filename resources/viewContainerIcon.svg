@@ -1,5 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-  <path d="M21 2H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7v2H8v2h8v-2h-2v-2h7a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm0 14H3V4h18v12z" fill="#C5C5C5"/>
-  <path d="M17.5 6.5v5.2l-1.6-1.6-.9.9 2.7 2.7 2.7-2.7-.9-.9-1.6 1.6V6.5z" fill="#C5C5C5"/>
-  <text x="5" y="13.2" font-family="sans-serif" font-size="7" font-weight="700" fill="#C5C5C5">RT</text>
+  <g fill="none" stroke="#C5C5C5" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+    <rect x="1.5" y="7" width="11" height="8" rx="1.2"/>
+    <path d="m4.5 10 2 1.4-2 1.4M8.5 13h1.8"/>
+    <rect x="15" y="3" width="7.5" height="3.5" rx=".7"/>
+    <rect x="15" y="8.2" width="7.5" height="3.5" rx=".7"/>
+    <rect x="15" y="13.4" width="7.5" height="3.5" rx=".7"/>
+    <path d="M17 4.8h2M17 10h2M17 15.2h2M20.8 4.8h.1M20.8 10h.1M20.8 15.2h.1"/>
+    <path d="M11.7 4.5h2.4m-1.1-1.1 1.1 1.1-1.1 1.1M13.9 18.7h-2.4m1.1-1.1-1.1 1.1 1.1 1.1"/>
+  </g>
 </svg>
