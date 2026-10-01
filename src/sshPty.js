@@ -29,10 +29,22 @@ function lastLoadError() {
     return _ptyLoadError;
 }
 
+/**
+ * VS Code names the horizontal dimension `columns`; node-pty expects `cols`.
+ * Preserve the node-pty shape internally so every spawn and resize uses it.
+ */
+function normalizeTerminalDimensions(dims) {
+    if (!dims) return null;
+    const cols = dims.columns ?? dims.cols;
+    if (!Number.isFinite(cols) || !Number.isFinite(dims.rows) || cols <= 0 || dims.rows <= 0) {
+        return null;
+    }
+    return { cols, rows: dims.rows };
+}
+
 /** True only for a real, positive, finite terminal dimension value. */
 function isValidSize(dims) {
-    return !!dims && Number.isFinite(dims.cols) && Number.isFinite(dims.rows)
-        && dims.cols > 0 && dims.rows > 0;
+    return !!normalizeTerminalDimensions(dims);
 }
 
 /** Reconnect is enabled only by the concise boolean configuration. */
@@ -135,8 +147,9 @@ function createReconnectingSshPty(host, sshArgs, env) {
         onDidWrite: writeEmitter.event,
         onDidClose: closeEmitter.event,
         open(initialDimensions) {
-            if (isValidSize(initialDimensions)) {
-                dimensions = initialDimensions;
+            const normalizedDimensions = normalizeTerminalDimensions(initialDimensions);
+            if (normalizedDimensions) {
+                dimensions = normalizedDimensions;
                 ensureSpawned();
                 return;
             }
@@ -168,14 +181,15 @@ function createReconnectingSshPty(host, sshArgs, env) {
         },
         setDimensions(newDimensions) {
             // VS Code can report 0x0 or undefined during initial terminal panel layout — ignore those.
-            if (!isValidSize(newDimensions)) return;
-            dimensions = newDimensions;
+            const normalizedDimensions = normalizeTerminalDimensions(newDimensions);
+            if (!normalizedDimensions) return;
+            dimensions = normalizedDimensions;
             if (!ptyProcess) {
                 ensureSpawned();
                 return;
             }
             try {
-                ptyProcess.resize(newDimensions.cols, newDimensions.rows);
+                ptyProcess.resize(normalizedDimensions.cols, normalizedDimensions.rows);
             } catch (err) {
                 writeEmitter.fire(`\r\n\x1b[31mFailed to resize terminal: ${err.message}\x1b[0m\r\n`);
             }
@@ -184,6 +198,6 @@ function createReconnectingSshPty(host, sshArgs, env) {
 }
 
 module.exports = {
-    isAvailable, lastLoadError, isValidSize, isReconnectEnabled,
+    isAvailable, lastLoadError, normalizeTerminalDimensions, isValidSize, isReconnectEnabled,
     hasWindowsOpenSsh, resolveSshExecutable, createReconnectingSshPty
 };

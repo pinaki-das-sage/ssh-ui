@@ -30,6 +30,13 @@ describe('sshPty', () => {
 });
 
 describe('isValidSize', () => {
+    test('accepts VS Code TerminalDimensions and normalizes columns for node-pty', () => {
+        const dimensions = { columns: 132, rows: 42 };
+
+        assert.equal(sshPty.isValidSize(dimensions), true);
+        assert.deepEqual(sshPty.normalizeTerminalDimensions(dimensions), { cols: 132, rows: 42 });
+    });
+
     test('accepts positive finite cols/rows', () => {
         assert.equal(sshPty.isValidSize({ cols: 80, rows: 24 }), true);
     });

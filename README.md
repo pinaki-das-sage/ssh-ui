@@ -40,7 +40,7 @@ Run PHPUnit tests on remote servers directly from VS Code, using the same stored
 1. Right-click any SSH host in the tree and choose **Edit PHPUnit Config**, or configure during **Add Host**.
 2. Enter the **remote project root path** (e.g. `/var/www/myapp`) and the **PHPUnit binary** (e.g. `./vendor/bin/phpunit`).
 
-For Intacct-style remote PHPUnit, use the same server-side wrapper configured as PhpStorm's remote PHP interpreter, or an equivalent helper, as `phpunit.bin`. Configure its absolute server path (for example, `/u02/home/your-user/bin/phpunit` rather than `~/bin/phpunit`); the wrapper establishes the required server environment, so no environment variables belong in Remote Toolkit configuration.
+For remote PHPUnit, use an equivalent helper, as `phpunit`. Configure its absolute server path (for example, `/home/your-user/bin/phpunit` rather than `~/bin/phpunit`); the wrapper establishes the required server environment, so no environment variables belong in Remote Toolkit configuration.
 
 ### Create the remote PHPUnit wrapper
 
@@ -52,16 +52,16 @@ cat > ~/bin/phpunit <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-exec /u02/home/master/externals/unitTest/php84_wrapper \
-  /u02/home/master/externals/unitTest/phpunit-9.5.13.phar \
-  --bootstrap /u02/home/master/externals/unitTest/bootstrap.php \
+exec /home/your-user/bin/php84_wrapper \
+  /home/your-user/bin/phpunit-9.5.13.phar \
+  --bootstrap /home/your-user/bin/bootstrap.php \
   "$@"
 EOF
 chmod 700 ~/bin/phpunit
 ~/bin/phpunit --version
 ```
 
-If your server provisions different shared paths or PHP versions, use the matching wrapper, PHPUnit phar, and bootstrap paths from its PhpStorm setup. Then configure the wrapper's **absolute** path in Remote Toolkit, for example: `"bin": "/u02/home/your-user/bin/phpunit"`.
+If your server provisions different shared paths or PHP versions, use the matching wrapper, PHPUnit phar, and bootstrap paths from its PhpStorm setup. Then configure the wrapper's **absolute** path in Remote Toolkit, for example: `"bin": "/home/your-user/bin/phpunit"`.
 
 The `phpunit` key is added to your host entry:
 
@@ -74,7 +74,7 @@ The `phpunit` key is added to your host entry:
   "phpunit": {
     "enabled": true,
     "remotePath": "/var/www/myapp",
-    "bin": "/u02/home/your-user/bin/phpunit"
+    "bin": "/home/your-user/bin/phpunit"
   }
 }
 ```
@@ -117,7 +117,7 @@ Example:
 {
   "hosts": [
     {
-      "name": "p308-webui",
+      "name": "my-remote-project",
       "host": "server.example.com",
       "port": 22,
       "user": "admin",
@@ -223,7 +223,7 @@ Files matching `sftp.ignore` are never uploaded, whether saved manually or autom
 
 The runner assumes your local workspace file paths mirror the remote directory structure under `remotePath`. If you open `tests/FooTest.php` locally, the runner sends `tests/FooTest.php` as the relative path on the remote server.
 
-For a folder run, Remote Toolkit similarly sends the selected workspace-relative folder (for example, `app/tests/source/cre`) to the configured PHPUnit wrapper. PHPUnit performs its normal recursive test discovery below that directory.
+For a folder run, Remote Toolkit similarly sends the selected workspace-relative folder (for example, `app/tests/<source-folder>`) to the configured PHPUnit wrapper. PHPUnit performs its normal recursive test discovery below that directory.
 
 ## Auto-Reconnect (Opt-In)
 

@@ -2,7 +2,7 @@
   "name": "ssh-ui",
   "displayName": "Remote Toolkit",
   "description": "VS Code toolkit for SSH and remote PHPUnit workflows",
-  "version": "0.5.12",
+  "version": "0.5.14",
   "publisher": "pinaki-das-sage",
   "author": {
     "name": "Pinaki Das",

@@ -8,6 +8,16 @@ Purpose: Records user-visible changes to Remote Toolkit releases.
 
 All notable changes to Remote Toolkit are documented here.
 
+## [Unreleased]
+
+### Fixed
+- Reconnecting SSH terminals now translate VS Code's `columns` terminal dimension to node-pty's `cols` value, so remote sessions use the actual panel width instead of remaining at 80 columns.
+
+## [0.5.13] — 2026-09-30
+
+### Documentation
+- Replaced environment-specific PHPUnit wrapper paths and host-example identifiers with generic placeholders.
+
 ## [0.5.12] — 2026-09-30
 
 ### Changed
